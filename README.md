@@ -1,130 +1,145 @@
 # Medical Research Multi-Agent System
 
-Ask a clinical question → 3 LangGraph agents search PubMed + arXiv → cited, evidence-graded answer.
+A production-style AI application that answers clinical questions by searching live medical databases. Three specialized LangGraph agents collaborate in sequence — retrieving papers, evaluating evidence quality, and synthesizing a cited, confidence-graded response.
+
+---
+
+## Demo
+
+> **Query:** What is the efficacy of metformin for type 2 diabetes?
+
+> **Response:** Metformin remains the first-line pharmacological treatment for type 2 diabetes... [Efficacy and safety of combining olorigliflozin with metformin, 2026, PubMed] ... **Confidence Level: Moderate**
 
 ---
 
 ## Architecture
 
 ```
-[Question]
-    │
-    ▼
-┌──────────────┐
-│  RETRIEVER   │  search_pubmed + search_arxiv + embed_and_store
-└──────┬───────┘
-       │ papers[]
-       ▼
-┌──────────────┐
-│ FACT-CHECKER │  retrieve_context → evidence quality report
-└──────┬───────┘
-       │ fact_check_notes
-       ▼
-┌──────────────┐
-│ SYNTHESIZER  │  retrieve_context → structured cited answer
-└──────────────┘
-       │
-       ▼
-Answer + Sources + Agent Trace (shown in UI)
+User Question
+      │
+      ▼
+┌─────────────────┐
+│   RETRIEVER     │  Calls search_pubmed + search_arxiv tools
+│   Agent         │  Embeds all papers into ChromaDB
+└────────┬────────┘
+         │ papers[]
+         ▼
+┌─────────────────┐
+│  FACT-CHECKER   │  Retrieves cached context via semantic search
+│  Agent          │  Assesses study types, sample sizes, contradictions
+└────────┬────────┘
+         │ evidence quality notes
+         ▼
+┌─────────────────┐
+│  SYNTHESIZER    │  Composes structured answer with inline citations
+│  Agent          │  Assigns confidence level: High / Moderate / Low
+└─────────────────┘
+         │
+         ▼
+  Answer + Sources + Confidence Level
 ```
 
-## Stack
+Each agent is constrained to specific tools (principle of least privilege) and appends a reasoning step to the shared `ResearchState` — making the pipeline fully traceable via LangSmith.
+
+---
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Agent orchestration | LangGraph |
-| LLM + tools | LangChain + OpenAI gpt-4o-mini |
-| Vector store | ChromaDB (local) |
+| LLM + tool calling | LangChain · OpenAI gpt-4o-mini |
 | Embeddings | text-embedding-3-small |
-| Live search | PubMed (NCBI Entrez) + arXiv |
+| Vector store | ChromaDB (local persistence) |
+| Literature search | PubMed (NCBI Entrez) · arXiv |
 | Observability | LangSmith |
 | API | FastAPI |
-| Frontend | React + Vite |
+| Frontend | Next.js 15 · TypeScript · App Router |
 
 ---
 
-## Setup (Windows)
-
-### Step 1 — Get API keys
-
-**OpenAI** (required)
-- https://platform.openai.com/api-keys → create key → copy it
-
-**LangSmith** (free, strongly recommended)
-- https://smith.langchain.com → sign up → Settings → Create API key → copy it
-
-### Step 2 — Backend
-
-```cmd
-cd backend
-
-python -m venv venv
-venv\Scripts\activate
-
-pip install -r requirements.txt
-
-copy .env.example .env
-```
-
-Open `.env` and fill in:
-```
-OPENAI_API_KEY=sk-...
-LANGCHAIN_API_KEY=ls-...
-NCBI_EMAIL=your@email.com
-```
-
-Then start the server:
-```cmd
-uvicorn main:app --reload
-```
-
-Test it works: open http://localhost:8000/docs → try POST /api/research
-
-### Step 3 — Frontend
-
-Open a second terminal:
-```cmd
-cd frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:5173
-
----
-
-## File structure
+## Project Structure
 
 ```
 med-agent/
 ├── backend/
 │   ├── agents/
-│   │   ├── __init__.py
 │   │   └── pipeline.py        ← LangGraph state machine (3 agents)
 │   ├── tools/
-│   │   ├── __init__.py
-│   │   └── search_tools.py    ← PubMed + arXiv + ChromaDB tools
-│   ├── main.py                ← FastAPI app
+│   │   └── search_tools.py    ← PubMed, arXiv, ChromaDB tool definitions
+│   ├── main.py                ← FastAPI app + CORS
 │   ├── requirements.txt
 │   └── .env.example
 └── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   ├── AgentTrace.jsx  ← collapsible agent reasoning UI
-    │   │   └── SourceCard.jsx  ← paper source card
-    │   ├── App.jsx
-    │   └── App.css
-    ├── index.html
-    ├── package.json
-    └── vite.config.js
+    └── app/
+        ├── components/
+        │   ├── Sidebar.tsx        ← Agent status + suggested queries
+        │   ├── LoadingStages.tsx  ← Live agent progress tracker
+        │   └── ResultMessage.tsx  ← Answer bubble + source cards
+        ├── types/index.ts
+        ├── page.tsx               ← Main chat interface
+        ├── layout.tsx
+        └── globals.css
 ```
 
 ---
 
-## Interview talking points
+## Setup
 
-1. **LangGraph state machine** — `ResearchState` is a typed dict that flows through nodes; each node returns a partial update. Draw the graph on a whiteboard.
-2. **Tool-binding per agent** — Retriever has write tools, Fact-Checker and Synthesizer have read-only tools. This is "principle of least privilege" applied to agents.
-3. **ChromaDB as a cache** — papers are embedded once and semantically retrieved; avoids re-calling APIs for follow-up questions.
-4. **LangSmith observability** — every LLM call, tool input/output, and latency is visible in the trace dashboard. Show this during the demo.
-5. **Evidence-constrained output** — the Synthesizer's system prompt explicitly forbids using outside knowledge. This is how you prevent hallucination in RAG systems.
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- OpenAI API key — https://platform.openai.com/api-keys
+- LangSmith API key (free) — https://smith.langchain.com
+
+### Backend
+
+```bash
+cd backend
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# Mac / Linux
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+cp .env.example .env
+# Fill in your API keys in .env
+
+uvicorn main:app --reload
+# API running at http://localhost:8000
+# Swagger UI at http://localhost:8000/docs
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Running at http://localhost:3000
+```
+
+---
+
+## Key Design Decisions
+
+**Why LangGraph over a simple chain?**
+LangGraph gives each agent its own node, tools, and system prompt. State flows explicitly between agents as a typed dict (`ResearchState`), making the pipeline easy to debug, extend, or swap individual agents without touching the others.
+
+**Why ChromaDB?**
+Papers are embedded once and cached locally. Follow-up queries on similar topics reuse the vector store instead of making redundant API calls — reducing latency and cost.
+
+**Why separate Fact-Checker and Synthesizer agents?**
+Separating evidence evaluation from response generation reduces hallucination. The Synthesizer's system prompt explicitly forbids using knowledge outside the retrieved evidence — it can only cite what the Retriever found and the Fact-Checker assessed.
+
+**Tool isolation per agent**
+- Retriever: `search_pubmed`, `search_arxiv`, `embed_and_store` (write access)
+- Fact-Checker: `retrieve_context` (read only)
+- Synthesizer: `retrieve_context` (read only)
+
+This mirrors the principle of least privilege — agents cannot access tools outside their responsibility.
