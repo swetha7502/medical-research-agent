@@ -6,10 +6,10 @@ import LoadingStages from "./components/LoadingStages";
 import ResultMessage from "./components/ResultMessage";
 import { ResearchResult } from "./types";
 
-const SUGGESTED = [
+const QUICK_CARDS = [
   { label: "Diabetes", q: "What is the efficacy of metformin for type 2 diabetes?" },
-  { label: "Oncology", q: "Latest immunotherapy for non-small cell lung cancer?" },
-  { label: "Psychiatry", q: "Current treatments for treatment-resistant depression?" },
+  { label: "Oncology", q: "What are the latest immunotherapy approaches for non-small cell lung cancer?" },
+  { label: "Psychiatry", q: "What are current treatments for treatment-resistant depression?" },
   { label: "Cardiology", q: "Does intermittent fasting reduce cardiovascular disease risk?" },
 ];
 
@@ -20,7 +20,6 @@ export default function Home() {
   const [activeStage, setActiveStage] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,8 +33,8 @@ export default function Home() {
     setError(null);
     setActiveStage(0);
 
-    const t1 = setTimeout(() => setActiveStage(1), 9000);
-    const t2 = setTimeout(() => setActiveStage(2), 20000);
+    const t1 = setTimeout(() => setActiveStage(1), 8000);
+    const t2 = setTimeout(() => setActiveStage(2), 18000);
 
     try {
       const res = await fetch("http://localhost:8000/api/research", {
@@ -46,6 +45,9 @@ export default function Home() {
       clearTimeout(t1); clearTimeout(t2);
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 429) {
+          throw new Error("⚠ Daily demo limit reached (50 queries/day). Check back tomorrow!");
+        }
         throw new Error(err.detail ?? `HTTP ${res.status}`);
       }
       const data: ResearchResult = await res.json();
@@ -58,274 +60,190 @@ export default function Home() {
     }
   }
 
-  const isEmpty = messages.length === 0 && !loading && !error;
-
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Sidebar onSelect={submit} disabled={loading} messageCount={messages.length} />
+      <Sidebar onSelect={submit} disabled={loading} />
 
-      {/* Main column */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* Top bar
+        {/* Topbar */}
         <div style={{
-          height: 52, borderBottom: "1px solid var(--border)",
-          display: "flex", alignItems: "center",
-          padding: "0 24px", gap: 12,
-          background: "var(--panel)", flexShrink: 0,
+          height: 46,
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 28px",
+          gap: 14,
+          flexShrink: 0,
         }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--teal)" }} className="pulse" />
-            <span style={{
-              fontSize: "0.9rem", fontWeight: 500, color: "var(--text)",
+          <span style={{ fontFamily: "var(--mono)", fontSize: "0.66rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--dim)" }}>
+            Research Terminal
+          </span>
+          <span style={{ color: "var(--border2)" }}>/</span>
+          {["PubMed", "arXiv", "ChromaDB", "gpt-4o-mini", "LangGraph"].map(tag => (
+            <span key={tag} style={{
+              fontFamily: "var(--mono)",
+              fontSize: "0.58rem",
+              letterSpacing: "0.06em",
+              padding: "2px 7px",
+              border: "1px solid var(--border2)",
+              color: "var(--dim)",
             }}>
-              Medical Research Assistant
+              {tag}
             </span>
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["LangGraph", "ChromaDB", "gpt-4o-mini"].map(t => (
-              <span key={t} style={{
-                fontFamily: "var(--mono)", fontSize: "0.58rem",
-                padding: "3px 8px",
-                background: "var(--surface)",
-                border: "1px solid var(--border2)",
-                borderRadius: 4, color: "var(--text-muted)",
-              }}>{t}</span>
-            ))}
-          </div>
-        </div> */}
+          ))}
+        </div>
 
-        {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 8px" }}>
+        {/* Chat area */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "32px 28px" }}>
 
-          {/* Empty state */}
-          {isEmpty && (
-            <div className="msg-in" style={{ maxWidth: 640, margin: "20px auto 0" }}>
-              {/* Greeting bubble */}
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 28 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: "linear-gradient(135deg, var(--teal-dim), #0d6b7a)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "4px 14px 14px 14px",
-                  padding: "18px 22px",
-                  flex: 1,
-                }}>
-                  <div style={{
-                    fontFamily: "var(--mono)", fontSize: "0.62rem",
-                    color: "var(--teal)", marginBottom: 10, letterSpacing: "0.06em",
-                  }}>
-                    MedResearch AI
-                  </div>
-                  <p style={{ fontSize: "1rem", color: "var(--text)", lineHeight: 1.6, marginBottom: 8, fontWeight: 500 }}>
-                    Hello. I can help you research medical literature.
-                  </p>
-                  <p style={{ fontSize: "0.88rem", color: "var(--text-dim)", lineHeight: 1.7, marginBottom: 16 }}>
-                    Ask me any clinical question. I will search PubMed and arXiv using specialized agents and return a cited, evidence-graded answer.
-                  </p>
-                  <p style={{ fontSize: "0.84rem", color: "var(--text-dim)", marginBottom: 16 }}>
-                    Here are some questions you can start with:
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {SUGGESTED.map(s => (
-                      <button
-                        key={s.q}
-                        onClick={() => submit(s.q)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10,
-                          background: "var(--surface2)",
-                          border: "1px solid var(--border2)",
-                          borderRadius: 8, padding: "10px 14px",
-                          cursor: "pointer", textAlign: "left",
-                          transition: "all 0.15s",
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.borderColor = "var(--teal-dim)";
-                          e.currentTarget.style.background = "var(--teal-glow)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.borderColor = "var(--border2)";
-                          e.currentTarget.style.background = "var(--surface2)";
-                        }}
-                      >
-                        <span style={{
-                          fontFamily: "var(--mono)", fontSize: "0.58rem",
-                          color: "var(--teal)", minWidth: 64,
-                          letterSpacing: "0.06em",
-                        }}>
-                          {s.label}
-                        </span>
-                        <span style={{ fontSize: "0.82rem", color: "var(--text-dim)", lineHeight: 1.4 }}>
-                          {s.q}
-                        </span>
-                        <svg style={{ marginLeft: "auto", flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <path d="M5 12h14M12 5l7 7-7 7" stroke="var(--teal-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          {messages.length === 0 && !loading && !error && (
+            <div style={{ paddingTop: 40 }}>
+              <h1 style={{
+                fontFamily: "var(--serif)",
+                fontSize: "2.4rem",
+                color: "var(--text)",
+                lineHeight: 1.2,
+                marginBottom: 12,
+                maxWidth: 520,
+              }}>
+                Query the medical<br />literature directly.
+              </h1>
+              <p style={{
+                fontSize: "0.86rem",
+                color: "var(--dim)",
+                lineHeight: 1.7,
+                maxWidth: 440,
+                marginBottom: 36,
+              }}>
+                Three specialized agents search PubMed and arXiv, evaluate evidence quality,
+                and synthesize a cited answer graded by confidence level.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 560 }}>
+                {QUICK_CARDS.map(card => (
+                  <button
+                    key={card.q}
+                    onClick={() => submit(card.q)}
+                    style={{
+                      background: "none",
+                      border: "1px solid var(--border)",
+                      padding: "14px 16px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "var(--accent)";
+                      e.currentTarget.style.background = "rgba(200,169,110,0.03)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.background = "none";
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: "var(--mono)",
+                      fontSize: "0.58rem",
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--accent)",
+                      display: "block",
+                      marginBottom: 5,
+                    }}>
+                      {card.label}
+                    </span>
+                    <p style={{ fontSize: "0.78rem", color: "var(--mid)", lineHeight: 1.4 }}>{card.q}</p>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Chat history */}
-          <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            {messages.map((msg, i) => (
-              <div key={i}>
-                {/* User bubble */}
-                <div className="msg-in" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-                  <div style={{
-                    maxWidth: "72%",
-                    background: "var(--user-bg)",
-                    border: "1px solid var(--border2)",
-                    borderRadius: "14px 4px 14px 14px",
-                    padding: "12px 16px",
-                  }}>
-                    <div style={{
-                      fontFamily: "var(--mono)", fontSize: "0.6rem",
-                      color: "var(--blue)", marginBottom: 5, letterSpacing: "0.06em",
-                    }}>
-                      You
-                    </div>
-                    <p style={{ fontSize: "0.9rem", color: "var(--text)", lineHeight: 1.5 }}>
-                      {msg.question}
-                    </p>
-                  </div>
-                </div>
-                <ResultMessage result={msg} />
+          {messages.map((msg, i) => (
+            <ResultMessage key={i} result={msg} />
+          ))}
+
+          {loading && <LoadingStages activeStage={activeStage} />}
+
+          {error && (
+            <div style={{
+              borderLeft: "2px solid var(--red)",
+              padding: "10px 16px",
+              marginBottom: 24,
+              background: "rgba(185,64,64,0.05)",
+            }}>
+              <div style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--red)", marginBottom: 4 }}>
+                Error
               </div>
-            ))}
+              <div style={{ fontSize: "0.8rem", color: "var(--mid)" }}>{error}</div>
+            </div>
+          )}
 
-            {loading && (
-              <>
-                {/* Show user's pending question */}
-                {query === "" && (
-                  <div />
-                )}
-                <LoadingStages activeStage={activeStage} />
-              </>
-            )}
-
-            {error && (
-              <div className="msg-in" style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: "rgba(248,113,113,0.12)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div style={{
-                  background: "rgba(248,113,113,0.06)",
-                  border: "1px solid rgba(248,113,113,0.2)",
-                  borderRadius: "4px 14px 14px 14px",
-                  padding: "14px 18px", flex: 1,
-                }}>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: "0.62rem", color: "var(--red)", marginBottom: 5 }}>
-                    Error
-                  </div>
-                  <p style={{ fontSize: "0.88rem", color: "var(--text-dim)", lineHeight: 1.5 }}>{error}</p>
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
+          <div ref={bottomRef} />
         </div>
 
-        {/* Input bar */}
-        <div style={{
-          borderTop: "1px solid var(--border)",
-          padding: "16px 28px 20px",
-          background: "var(--panel)",
-          flexShrink: 0,
-        }}>
-          <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            <div
-              className="input-focus"
+        {/* Input */}
+        <div style={{ borderTop: "1px solid var(--border)", padding: "14px 28px 18px", background: "var(--bg)", flexShrink: 0 }}>
+          <div style={{ display: "flex", border: "1px solid var(--border2)" }}>
+            <span style={{
+              fontFamily: "var(--mono)",
+              fontSize: "0.75rem",
+              color: "var(--accent)",
+              padding: "12px 14px",
+              background: "var(--surface)",
+              borderRight: "1px solid var(--border2)",
+              display: "flex",
+              alignItems: "center",
+              userSelect: "none",
+              flexShrink: 0,
+            }}>
+              &gt;_
+            </span>
+            <textarea
+              rows={2}
+              placeholder="Enter a clinical question..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(); }}
+              disabled={loading}
               style={{
-                display: "flex",
+                flex: 1,
                 background: "var(--surface)",
-                border: "1px solid var(--border2)",
-                borderRadius: 12,
-                overflow: "hidden",
-                transition: "all 0.2s",
+                border: "none",
+                outline: "none",
+                color: "var(--text)",
+                fontFamily: "var(--mono)",
+                fontSize: "0.78rem",
+                padding: "12px 14px",
+                resize: "none",
+                lineHeight: 1.5,
+              }}
+            />
+            <button
+              onClick={() => submit()}
+              disabled={loading || !query.trim()}
+              style={{
+                background: loading || !query.trim() ? "var(--border2)" : "var(--accent)",
+                border: "none",
+                color: loading || !query.trim() ? "var(--dim)" : "#0a0a0a",
+                fontFamily: "var(--mono)",
+                fontSize: "0.66rem",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                padding: "0 20px",
+                cursor: loading || !query.trim() ? "not-allowed" : "pointer",
+                transition: "all 0.15s",
+                flexShrink: 0,
               }}
             >
-              <textarea
-                ref={textareaRef}
-                rows={2}
-                placeholder="Ask a clinical question, e.g. 'What is the evidence for aspirin in primary prevention?'"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(); }}
-                disabled={loading}
-                style={{
-                  flex: 1, background: "transparent",
-                  border: "none", outline: "none",
-                  color: "var(--text)", fontFamily: "var(--sans)",
-                  fontSize: "0.9rem", padding: "14px 16px",
-                  resize: "none", lineHeight: 1.5,
-                }}
-              />
-              <div style={{
-                display: "flex", flexDirection: "column",
-                justifyContent: "center", padding: "0 12px",
-                borderLeft: "1px solid var(--border2)",
-              }}>
-                <button
-                  onClick={() => submit()}
-                  disabled={loading || !query.trim()}
-                  style={{
-                    width: 38, height: 38, borderRadius: 8,
-                    background: loading || !query.trim() ? "var(--surface2)" : "var(--teal-dim)",
-                    border: "none",
-                    cursor: loading || !query.trim() ? "not-allowed" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.15s",
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={e => {
-                    if (!loading && query.trim()) e.currentTarget.style.background = "var(--teal)";
-                  }}
-                  onMouseLeave={e => {
-                    if (!loading && query.trim()) e.currentTarget.style.background = "var(--teal-dim)";
-                  }}
-                >
-                  {loading ? (
-                    <div style={{
-                      width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)",
-                      borderTopColor: "white", borderRadius: "50%",
-                      animation: "spin 0.7s linear infinite",
-                    }} />
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-            <div style={{
-              fontFamily: "var(--mono)", fontSize: "0.6rem",
-              color: "var(--text-muted)", marginTop: 7, textAlign: "center",
-            }}>
-              Ctrl+Enter to send · Searches PubMed + arXiv · ~30–60s per query
-            </div>
+              {loading ? "..." : "Submit"}
+            </button>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", color: "var(--dim)", marginTop: 7 }}>
+            Ctrl+Enter to submit · ~30–60s per query
           </div>
         </div>
-
       </div>
     </div>
   );
