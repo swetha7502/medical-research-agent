@@ -1,7 +1,6 @@
 "use client";
 
 const EXAMPLES = [
-  { label: "Diabetes", q: "What is the efficacy of metformin for type 2 diabetes?" },
   { label: "Oncology", q: "Latest immunotherapy approaches for non-small cell lung cancer?" },
   { label: "Psychiatry", q: "Current treatments for treatment-resistant depression?" },
   { label: "Cardiology", q: "Does intermittent fasting reduce cardiovascular disease risk?" },
