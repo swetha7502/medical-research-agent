@@ -36,24 +36,16 @@ export default function Sidebar({ onSelect, disabled, messageCount }: SidebarPro
         {/* Pixel bot + intro */}
         <div>
           <svg width="56" height="56" viewBox="0 0 16 16" style={{ imageRendering: "pixelated", display: "block", marginBottom: 10 }}>
-            {/* Head */}
             <rect x="3" y="1" width="10" height="8" fill="#1a7a72" />
-            {/* Eyes */}
             <rect x="5" y="3" width="2" height="2" fill="#2dd4bf" />
             <rect x="9" y="3" width="2" height="2" fill="#2dd4bf" />
-            {/* Smile */}
             <rect x="5" y="6" width="1" height="1" fill="#2dd4bf" />
             <rect x="6" y="7" width="4" height="1" fill="#2dd4bf" />
             <rect x="10" y="6" width="1" height="1" fill="#2dd4bf" />
-            {/* Antenna */}
             <rect x="7" y="0" width="2" height="1" fill="#2dd4bf" />
-            {/* Neck */}
             <rect x="7" y="9" width="2" height="1" fill="#1a7a72" />
-            {/* Body */}
             <rect x="4" y="10" width="8" height="5" fill="#1a7a72" />
-            {/* Chest light */}
             <rect x="7" y="11" width="2" height="2" fill="#2dd4bf" />
-            {/* Arms */}
             <rect x="2" y="10" width="2" height="4" fill="#1a7a72" />
             <rect x="12" y="10" width="2" height="4" fill="#1a7a72" />
           </svg>
